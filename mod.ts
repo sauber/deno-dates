@@ -133,10 +133,12 @@ export function dateFromWeekday(
   return wanted;
 }
 
+/** Convert date to bar number */
 export function dateToBar(date: DateFormat): number {
   return diffDate(date, today());
 }
 
+/** Convert bar number to date */
 export function barToDate(bar: number): DateFormat {
   return nextDate(today(), -bar);
 }
