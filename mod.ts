@@ -7,56 +7,64 @@ export type DateFormat = string;
 /** Number of days from date in the past until to today. */
 export type Bar = number;
 
-/**
- * Date Cache is bi-directional linked list
- */
 
-/** A date pointing to another date */
-type DateCache = Record<DateFormat, DateFormat>;
+class DateCache {
+  static #instance: DateCache;
 
-declare global {
-  var nextDateCache: DateCache;
-  var prevDateCache: DateCache;
-}
+  /** Bi-directional linked list of sequential dates */
+  static #nextDateCache: Record<DateFormat, DateFormat> = {};
+  static #prevDateCache: Record<DateFormat, DateFormat> = {};
 
-// Initialize global cache
-globalThis.nextDateCache = {};
-globalThis.prevDateCache = {};
+  private constructor() {}
 
-/** Calculate or lookup next date */
-function DateInc(date: DateFormat): DateFormat {
-  /** Next date */
-  if (!(date in nextDateCache)) {
-    nextDateCache[date] = formatDate(new Date(date).getTime() + 86400000);
+  /**
+   * The static getter that controls access to the singleton instance.
+   *
+   * This implementation allows you to extend the Singleton class while
+   * keeping just one instance of each subclass around.
+   */
+  public static get instance(): DateCache {
+    if (!DateCache.#instance) {
+      DateCache.#instance = new DateCache();
+    }
+    return DateCache.#instance;
   }
-  const next: DateFormat = nextDateCache[date];
 
-  /** Store reverse pair */
-  if (!(next in prevDateCache)) prevDateCache[next] = date;
+  /** Calculate or lookup next date */
+  public DateInc(date: DateFormat): DateFormat {
+    /** Next date */
+    if (!(date in DateCache.#nextDateCache)) {
+      DateCache.#nextDateCache[date] = formatDate(new Date(date).getTime() + 86400000);
+    }
+    const next: DateFormat = DateCache.#nextDateCache[date];
 
-  return next;
-}
+    /** Store reverse pair */
+    if (!(next in DateCache.#prevDateCache)) DateCache.#prevDateCache[next] = date;
 
-/** Calculate or lookup previous date */
-function DateDec(date: DateFormat): DateFormat {
-  /** Next date */
-  if (!(date in prevDateCache)) {
-    prevDateCache[date] = formatDate(new Date(date).getTime() - 86400000);
+    return next;
   }
-  const prev: DateFormat = prevDateCache[date];
 
-  /** Store reverse pair */
-  if (!(prev in nextDateCache)) nextDateCache[prev] = date;
+  /** Calculate or lookup previous date */
+  public DateDec(date: DateFormat): DateFormat {
+    /** Next date */
+    if (!(date in DateCache.#prevDateCache)) {
+      DateCache.#prevDateCache[date] = formatDate(new Date(date).getTime() - 86400000);
+    }
+    const prev: DateFormat = DateCache.#prevDateCache[date];
 
-  return prev;
+    /** Store reverse pair */
+    if (!(prev in DateCache.#nextDateCache)) DateCache.#nextDateCache[prev] = date;
+
+    return prev;
+  }
 }
 
 /** Date number of days away */
 export function nextDate(date: DateFormat, days = 1): DateFormat {
-  if (days == 1) return DateInc(date);
-  else if (days > 1) return nextDate(DateInc(date), days - 1);
-  else if (days == -1) return DateDec(date);
-  else if (days < -1) return nextDate(DateDec(date), days + 1);
+  if (days == 1) return DateCache.instance.DateInc(date);
+  else if (days > 1) return nextDate(DateCache.instance.DateInc(date), days - 1);
+  else if (days == -1) return DateCache.instance.DateDec(date);
+  else if (days < -1) return nextDate(DateCache.instance.DateDec(date), days + 1);
   else return date;
 }
 
@@ -92,7 +100,7 @@ export function range(start: DateFormat, end: DateFormat): Array<DateFormat> {
   while (true) {
     dates.push(start);
     if (start == end) break;
-    start = DateInc(start);
+    start = DateCache.instance.DateInc(start);
   }
   return dates;
 }
